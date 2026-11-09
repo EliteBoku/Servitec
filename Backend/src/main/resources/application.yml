@@ -47,11 +47,21 @@ app:
     jwt:
       secret: ${JWT_SECRET}
       issuer: servitec-backend
-      access-token-expiration-minutes: 60
+      access-token-expiration-minutes: 15
       inactivity-timeout-minutes: 60
+      refresh-token-expiration-days: 7
     account-token:
       activation-expiration-hours: 24
       password-reset-expiration-minutes: 30
+    refresh-cookie:
+      secure: ${COOKIE_SECURE:false}
+      same-site: Lax
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      nombre: ${BOOTSTRAP_ADMIN_NAME:}
+      correo: ${BOOTSTRAP_ADMIN_EMAIL:}
+      contrasena: ${BOOTSTRAP_ADMIN_PASSWORD:}
 
 server:
   port: ${SERVER_PORT:8080}

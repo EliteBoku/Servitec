@@ -35,4 +35,36 @@ public final class TokenHashUtil {
             throw new IllegalStateException("Algoritmo SHA-256 no disponible en la JVM", e);
         }
     }
+    public static String generateSecureToken() {
+
+        byte[] tokenBytes = new byte[32];
+
+        new java.security.SecureRandom().nextBytes(tokenBytes);
+
+        return java.util.Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(tokenBytes);
+    }
+
+    public static String sha256Hex(String value) {
+
+        try {
+
+            java.security.MessageDigest digest =
+                    java.security.MessageDigest.getInstance("SHA-256");
+
+            byte[] hash = digest.digest(
+                    value.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+            );
+
+            return java.util.HexFormat.of().formatHex(hash);
+
+        } catch (java.security.NoSuchAlgorithmException exception) {
+
+            throw new IllegalStateException(
+                    "No está disponible el algoritmo SHA-256.",
+                    exception
+            );
+        }
+    }
 }

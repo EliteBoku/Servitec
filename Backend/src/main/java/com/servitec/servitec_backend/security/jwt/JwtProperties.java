@@ -21,6 +21,8 @@ public class JwtProperties {
     @Min(1)
     private long inactivityTimeoutMinutes = 60;
 
+    private long refreshTokenExpirationDays = 7;
+
     public String getSecret() {
         return secret;
     }
@@ -41,6 +43,10 @@ public class JwtProperties {
         return accessTokenExpirationMinutes;
     }
 
+    public long getRefreshTokenExpirationDays() {
+        return refreshTokenExpirationDays;
+    }
+
     public void setAccessTokenExpirationMinutes(
             long accessTokenExpirationMinutes
     ) {
@@ -55,5 +61,11 @@ public class JwtProperties {
             long inactivityTimeoutMinutes
     ) {
         this.inactivityTimeoutMinutes = inactivityTimeoutMinutes;
+    }
+
+    public void setRefreshTokenExpirationDays(
+            long refreshTokenExpirationDays
+    ) {
+        this.refreshTokenExpirationDays = refreshTokenExpirationDays;
     }
 }
