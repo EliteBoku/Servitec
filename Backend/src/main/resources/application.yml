@@ -28,6 +28,7 @@ spring:
     port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:no-reply@servitec.local}
     password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
     properties:
       mail:
         smtp:
@@ -53,15 +54,23 @@ app:
     account-token:
       activation-expiration-hours: 24
       password-reset-expiration-minutes: 30
+      activation-hours: ${ACCOUNT_ACTIVATION_HOURS:24}
     refresh-cookie:
       secure: ${COOKIE_SECURE:false}
       same-site: Lax
+
   bootstrap:
     admin:
       enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
       nombre: ${BOOTSTRAP_ADMIN_NAME:}
       correo: ${BOOTSTRAP_ADMIN_EMAIL:}
       contrasena: ${BOOTSTRAP_ADMIN_PASSWORD:}
+
+  notifications:
+    from: ${MAIL_USERNAME:}
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:5173}
+    activation-path: ${ACTIVATION_PATH:/activar-cuenta}
+    recovery-path: ${PASSWORD_RECOVERY_PATH:/restablecer-contrasena}
 
 server:
   port: ${SERVER_PORT:8080}

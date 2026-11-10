@@ -54,6 +54,7 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/actuator/health"
@@ -67,6 +68,12 @@ public class SecurityConfig {
                                 "/api/v1/auth/password/recovery/request",
                                 "/api/v1/auth/password/recovery/confirm"
                         ).permitAll()
+
+                        // CV-10: solamente el administrador puede crear usuarios.
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/admin/users"
+                        ).hasRole("ADMINISTRADOR")
 
                         .anyRequest().authenticated()
                 )
