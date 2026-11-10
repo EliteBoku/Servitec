@@ -7,10 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.jpa.repository.Query;
-import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -61,5 +58,19 @@ public interface SesionUsuarioRepository
             @Param("idSesion") Integer idSesion,
             @Param("ahora") LocalDateTime ahora,
             @Param("limiteInactividad") LocalDateTime limiteInactividad
+    );
+    @Modifying(
+            flushAutomatically = true,
+            clearAutomatically = true
+    )
+    @Query("""
+        UPDATE SesionUsuario s
+        SET s.fechaHoraRevocacion = :fechaRevocacion
+        WHERE s.usuario.idUsuario = :idUsuario
+          AND s.fechaHoraRevocacion IS NULL
+        """)
+    int revocarSesionesActivasDeUsuario(
+            @Param("idUsuario") Integer idUsuario,
+            @Param("fechaRevocacion") LocalDateTime fechaRevocacion
     );
 }

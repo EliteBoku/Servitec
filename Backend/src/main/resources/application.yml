@@ -55,6 +55,7 @@ app:
       activation-expiration-hours: 24
       password-reset-expiration-minutes: 30
       activation-hours: ${ACCOUNT_ACTIVATION_HOURS:24}
+      recovery-minutes: ${PASSWORD_RECOVERY_MINUTES:30}
     refresh-cookie:
       secure: ${COOKIE_SECURE:false}
       same-site: Lax
