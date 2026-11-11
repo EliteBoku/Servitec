@@ -18,15 +18,40 @@ httpClient.interceptors.request.use((config) => {
 httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    // Si recibe 401 fuera del login, notificar expiración por inactividad (CV-01)
+    if (status === 401 && !requestUrl.includes('/auth/login')) {
       localStorage.removeItem('servitec_access_token');
+      localStorage.removeItem('servitec_refresh_token');
       localStorage.removeItem('servitec_user');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login?expired=true';
-      }
+      window.dispatchEvent(new CustomEvent('servitec:session-expired'));
     }
+
     return Promise.reject(error);
   }
 );
+
+/**
+ * Utilidad para extraer de forma uniforme el mensaje, errores de campos y faltantes de stock
+ * devueltos por GlobalExceptionHandler en el backend.
+ */
+export function extractApiError(error, defaultMessage = 'Ocurrió un error al procesar la solicitud.') {
+  const data = error.response?.data;
+  if (!data) {
+    return {
+      message: defaultMessage,
+      fieldErrors: null,
+      missingStockItems: null,
+    };
+  }
+  return {
+    message: data.mensaje || defaultMessage,
+    fieldErrors: data.erroresCampos || null,
+    missingStockItems: data.elementosSinDisponibilidad || null,
+    code: data.codigoError || null,
+  };
+}
 
 export default httpClient;
