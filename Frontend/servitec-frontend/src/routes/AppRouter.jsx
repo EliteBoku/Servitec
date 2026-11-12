@@ -16,6 +16,7 @@ import ResetPasswordPage from '../modules/auth/pages/ResetPasswordPage';
 import AdminUsersPage from '../modules/users/pages/AdminUsersPage';
 
 import AdminCatalogPage from '../modules/inventory/pages/AdminCatalogPage';
+import AdminMovementsPage from '../modules/inventory/pages/AdminMovementsPage';
 import TechCatalogViewPage from '../modules/inventory/pages/TechCatalogViewPage';
 
 function ModulePlaceholder({ title, step }) {
@@ -62,10 +63,7 @@ export default function AppRouter() {
           />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="catalogo" element={<AdminCatalogPage />} />
-          <Route
-            path="movimientos"
-            element={<ModulePlaceholder title="Movimientos Manuales e Historial de Stock" step="Micro-paso F2.3" />}
-          />
+          <Route path="movimientos" element={<AdminMovementsPage />} />
         </Route>
       </Route>
 
