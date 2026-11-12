@@ -17,6 +17,7 @@ import com.servitec.servitec_backend.shared.enums.TipoTokenCuenta;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -132,6 +134,32 @@ public class UserAdminService {
                 usuarioGuardado.getEstadoCuenta(),
                 "La cuenta fue creada y se solicitó el envío del correo de activación."
         );
+    }
+
+    /**
+     * Lista los usuarios registrados en la base de datos con filtro opcional por rol.
+     */
+    @Transactional(readOnly = true)
+    public List<UsuarioCreadoResponse> listarUsuarios(RolNombre rolFiltro) {
+        return usuarioRepository.findAll(Sort.by(Sort.Direction.DESC, "idUsuario"))
+                .stream()
+                .filter(u -> {
+                    RolNombre rolUsuario = obtenerRolNombre(u);
+                    return rolFiltro == null || rolFiltro == rolUsuario;
+                })
+                .map(u -> new UsuarioCreadoResponse(
+                        u.getIdUsuario(),
+                        u.getNombreCompleto(),
+                        u.getCorreo(),
+                        obtenerRolNombre(u),
+                        u.getEstadoCuenta(),
+                        u.getFechaCreacion() != null ? u.getFechaCreacion().toString() : null
+                ))
+                .toList();
+    }
+
+    private RolNombre obtenerRolNombre(Usuario u) {
+        return RolNombre.valueOf(String.valueOf(u.getRol().getNombre()));
     }
 
     /**
