@@ -13,6 +13,8 @@ import ActivateAccountPage from '../modules/auth/pages/ActivateAccountPage';
 import ForgotPasswordPage from '../modules/auth/pages/ForgotPasswordPage';
 import ResetPasswordPage from '../modules/auth/pages/ResetPasswordPage';
 
+import AdminUsersPage from '../modules/users/pages/AdminUsersPage';
+
 function ModulePlaceholder({ title, step }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
@@ -55,10 +57,7 @@ export default function AppRouter() {
             path="ordenes"
             element={<ModulePlaceholder title="Tablero de Órdenes de Servicio" step="Micro-paso F3.1" />}
           />
-          <Route
-            path="usuarios"
-            element={<ModulePlaceholder title="Gestión de Usuarios (Clientes y Técnicos)" step="Micro-paso F2.1" />}
-          />
+          <Route path="usuarios" element={<AdminUsersPage />} />
           <Route
             path="catalogo"
             element={<ModulePlaceholder title="Catálogo de Repuestos e Insumos" step="Micro-paso F2.2" />}
