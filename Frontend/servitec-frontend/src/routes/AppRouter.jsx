@@ -15,6 +15,9 @@ import ResetPasswordPage from '../modules/auth/pages/ResetPasswordPage';
 
 import AdminUsersPage from '../modules/users/pages/AdminUsersPage';
 
+import AdminCatalogPage from '../modules/inventory/pages/AdminCatalogPage';
+import TechCatalogViewPage from '../modules/inventory/pages/TechCatalogViewPage';
+
 function ModulePlaceholder({ title, step }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
@@ -58,10 +61,7 @@ export default function AppRouter() {
             element={<ModulePlaceholder title="Tablero de Órdenes de Servicio" step="Micro-paso F3.1" />}
           />
           <Route path="usuarios" element={<AdminUsersPage />} />
-          <Route
-            path="catalogo"
-            element={<ModulePlaceholder title="Catálogo de Repuestos e Insumos" step="Micro-paso F2.2" />}
-          />
+          <Route path="catalogo" element={<AdminCatalogPage />} />
           <Route
             path="movimientos"
             element={<ModulePlaceholder title="Movimientos Manuales e Historial de Stock" step="Micro-paso F2.3" />}
@@ -77,10 +77,7 @@ export default function AppRouter() {
             path="ordenes"
             element={<ModulePlaceholder title="Mis Órdenes Asignadas" step="Micro-paso F3.2" />}
           />
-          <Route
-            path="catalogo"
-            element={<ModulePlaceholder title="Consulta de Catálogo Activo" step="Micro-paso F2.2" />}
-          />
+          <Route path="catalogo" element={<TechCatalogViewPage />} />
         </Route>
       </Route>
 
