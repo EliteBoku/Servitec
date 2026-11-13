@@ -23,6 +23,9 @@ import ClientOrdersPage from '../modules/orders/pages/ClientOrdersPage';
 import ClientNewOrderPage from '../modules/orders/pages/ClientNewOrderPage';
 import AdminOrdersBoardPage from '../modules/orders/pages/AdminOrdersBoardPage';
 
+import TechAssignedOrdersPage from '../modules/orders/pages/TechAssignedOrdersPage';
+import TechOrderWorkPage from '../modules/orders/pages/TechOrderWorkPage';
+
 function ModulePlaceholder({ title, step }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
@@ -76,15 +79,12 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute allowedRoles={['TECNICO_ESPECIALISTA']} />}>
         <Route path="/tecnico" element={<TechLayout />}>
           <Route index element={<Navigate to="ordenes" replace />} />
-          <Route
-            path="ordenes"
-            element={<ModulePlaceholder title="Mis Órdenes Asignadas" step="Micro-paso F3.2" />}
-          />
+          <Route path="ordenes" element={<TechAssignedOrdersPage />} />
+          <Route path="ordenes/:idOrden" element={<TechOrderWorkPage />} />
           <Route path="catalogo" element={<TechCatalogViewPage />} />
         </Route>
       </Route>
 
-      {/* Rutas Protegidas: CLIENTE */}
       {/* Rutas Protegidas: CLIENTE */}
       <Route element={<ProtectedRoute allowedRoles={['CLIENTE']} />}>
         <Route path="/cliente" element={<ClientLayout />}>
