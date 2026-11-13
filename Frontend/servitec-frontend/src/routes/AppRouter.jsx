@@ -19,6 +19,10 @@ import AdminCatalogPage from '../modules/inventory/pages/AdminCatalogPage';
 import AdminMovementsPage from '../modules/inventory/pages/AdminMovementsPage';
 import TechCatalogViewPage from '../modules/inventory/pages/TechCatalogViewPage';
 
+import ClientOrdersPage from '../modules/orders/pages/ClientOrdersPage';
+import ClientNewOrderPage from '../modules/orders/pages/ClientNewOrderPage';
+import AdminOrdersBoardPage from '../modules/orders/pages/AdminOrdersBoardPage';
+
 function ModulePlaceholder({ title, step }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
@@ -57,9 +61,10 @@ export default function AppRouter() {
       <Route element={<ProtectedRoute allowedRoles={['ADMINISTRADOR']} />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="ordenes" replace />} />
+          <Route path="ordenes" element={<AdminOrdersBoardPage />} />
           <Route
-            path="ordenes"
-            element={<ModulePlaceholder title="Tablero de Órdenes de Servicio" step="Micro-paso F3.1" />}
+            path="ordenes/:idOrden"
+            element={<ModulePlaceholder title="Expediente Administrativo de Orden" step="Micro-paso F5.1 / F6.1" />}
           />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="catalogo" element={<AdminCatalogPage />} />
@@ -80,19 +85,19 @@ export default function AppRouter() {
       </Route>
 
       {/* Rutas Protegidas: CLIENTE */}
+      {/* Rutas Protegidas: CLIENTE */}
       <Route element={<ProtectedRoute allowedRoles={['CLIENTE']} />}>
         <Route path="/cliente" element={<ClientLayout />}>
           <Route index element={<Navigate to="ordenes" replace />} />
+          <Route path="ordenes" element={<ClientOrdersPage />} />
+          <Route path="nueva-solicitud" element={<ClientNewOrderPage />} />
           <Route
-            path="ordenes"
-            element={<ModulePlaceholder title="Mis Órdenes de Servicio" step="Micro-paso F3.1" />}
-          />
-          <Route
-            path="nueva-solicitud"
-            element={<ModulePlaceholder title="Nueva Solicitud de Servicio" step="Micro-paso F3.1" />}
+            path="ordenes/:idOrden"
+            element={<ModulePlaceholder title="Seguimiento y Presupuestos de Orden" step="Micro-paso F4.1" />}
           />
         </Route>
       </Route>
+
 
       {/* Redirección por defecto */}
       <Route
