@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
 import { ordersApi } from '../../../api/ordersApi';
 import { diagnosticsApi } from '../../../api/diagnosticsApi';
 import { budgetsApi } from '../../../api/budgetsApi';
+import { executionApi } from '../../../api/executionApi';
 import { extractApiError } from '../../../api/httpClient';
 import { formatDateTime } from '../../../shared/utils/formatters';
 import StatusBadge from '../../../shared/components/StatusBadge';
@@ -20,32 +21,67 @@ import OrderTimelineModal from '../components/OrderTimelineModal';
 import DiagnosticFormCard from '../../diagnostics/components/DiagnosticFormCard';
 import DiagnosticReadOnlyCard from '../../diagnostics/components/DiagnosticReadOnlyCard';
 import CreateOriginalBudgetForm from '../../budgets/components/CreateOriginalBudgetForm';
+import CreateComplementaryForm from '../../budgets/components/CreateComplementaryForm';
+import TechnicalEvaluationForm from '../../budgets/components/TechnicalEvaluationForm';
 import ClientBudgetDecisionCard from '../../budgets/components/ClientBudgetDecisionCard';
+import ExecutionControlPanel from '../../execution/components/ExecutionControlPanel';
 
 export default function TechOrderWorkPage() {
-  const { idOrden } = useParams();
+  const params = useParams();
   const navigate = useNavigate();
+
+  const rawOrderId = params.idOrden ?? params.id;
+  const isValidOrderId =
+    rawOrderId !== undefined &&
+    rawOrderId !== null &&
+    rawOrderId !== 'undefined' &&
+    rawOrderId !== 'null' &&
+    !isNaN(Number(rawOrderId));
+
+  const idOrden = isValidOrderId ? Number(rawOrderId) : null;
 
   const [order, setOrder] = useState(null);
   const [diagnostic, setDiagnostic] = useState(null);
   const [budgets, setBudgets] = useState([]);
+  const [timeSummary, setTimeSummary] = useState(null);
+  const [evaluations, setEvaluations] = useState([]);
+  const [authorizations, setAuthorizations] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [errorInfo, setErrorInfo] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
 
   const cargarExpedienteTecnico = useCallback(async () => {
+    if (!idOrden) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setErrorInfo(null);
     try {
-      const [ordenData, diagData, budgetsData] = await Promise.all([
+      const [
+        ordenData,
+        diagData,
+        budgetsData,
+        timeData,
+        evalsData,
+        authsData,
+      ] = await Promise.all([
         ordersApi.consultarDetalleOrden(idOrden),
         diagnosticsApi.consultarDiagnosticoPorOrden(idOrden),
         budgetsApi.listarPresupuestosPorOrden(idOrden),
+        executionApi.consultarResumenTiempo(idOrden),
+        budgetsApi.listarEvaluacionesPorOrden(idOrden),
+        budgetsApi.listarAutorizacionesPorOrden(idOrden),
       ]);
       setOrder(ordenData);
       setDiagnostic(diagData);
       setBudgets(budgetsData);
+      setTimeSummary(timeData);
+      setEvaluations(evalsData);
+      setAuthorizations(authsData);
     } catch (err) {
       setErrorInfo(
         extractApiError(
@@ -59,8 +95,12 @@ export default function TechOrderWorkPage() {
   }, [idOrden]);
 
   useEffect(() => {
+    if (!isValidOrderId) {
+      navigate('/tecnico/ordenes', { replace: true });
+      return;
+    }
     cargarExpedienteTecnico();
-  }, [cargarExpedienteTecnico]);
+  }, [isValidOrderId, cargarExpedienteTecnico, navigate]);
 
   const handleDiagnosticSaved = (diagRegistrado) => {
     setDiagnostic(diagRegistrado);
@@ -90,13 +130,94 @@ export default function TechOrderWorkPage() {
         : prev
     );
     setSuccessMessage(
-      `Presupuesto ${nuevoPresupuesto.codigoPresupuesto} generado correctamente. La orden pasó al estado Presupuestado en espera de la decisión del Cliente.`
+      `Presupuesto ${nuevoPresupuesto.codigoPresupuesto} generado correctamente.`
     );
+    cargarExpedienteTecnico();
   };
 
-  const tienePresupuestoOriginal = budgets.some(
-    (b) => b.tipoPresupuesto === 'ORIGINAL'
-  );
+  const handleTimeUpdated = (nuevoResumenTiempo, mensaje) => {
+    setTimeSummary(nuevoResumenTiempo);
+    if (nuevoResumenTiempo?.estadoOperativo) {
+      setOrder((prev) =>
+        prev ? { ...prev, estadoOperativo: nuevoResumenTiempo.estadoOperativo } : prev
+      );
+    }
+    setSuccessMessage(mensaje);
+  };
+
+  const handleComplementaryCreated = (nuevoComp) => {
+    setSuccessMessage(
+      `Presupuesto complementario ${nuevoComp.codigoPresupuesto} emitido y notificado por correo al Cliente.`
+    );
+    cargarExpedienteTecnico();
+  };
+
+  const handleEvaluationSaved = (evalGuardada) => {
+    setSuccessMessage(
+      evalGuardada.elementosIndispensables
+        ? 'Evaluación técnica registrada: los elementos fueron marcados como indispensables. La orden aguarda autorización o decisión del Administrador.'
+        : 'Evaluación técnica registrada: los elementos no son indispensables. Ya puedes reanudar la reparación.'
+    );
+    cargarExpedienteTecnico();
+  };
+
+  // Análisis de estado presupuestario para habilitar/bloquear acciones en PAUSADA (RN-08 y RN-09)
+  const estadoFlujoComplementarios = useMemo(() => {
+    const original = budgets.find((b) => b.tipoPresupuesto === 'ORIGINAL');
+    const complementarios = budgets.filter(
+      (b) => b.tipoPresupuesto === 'COMPLEMENTARIO'
+    );
+    const hayPendiente = complementarios.some(
+      (b) => b.estado === 'PENDIENTE_APROBACION'
+    );
+
+    const idsEvaluados = new Set(
+      evaluations.map((e) => e.idPresupuestoRechazado)
+    );
+    const rechazadoSinEvaluar = complementarios.find(
+      (b) => b.estado === 'RECHAZADO' && !idsEvaluados.has(b.idPresupuesto)
+    );
+
+    const autorizacionDisponible = authorizations.find(
+      (a) => !a.utilizadaEnNuevaPropuesta
+    );
+
+    let motivoBloqueoReanudar = null;
+    if (hayPendiente) {
+      motivoBloqueoReanudar =
+        'Existe un presupuesto complementario pendiente de decisión del Cliente.';
+    } else if (rechazadoSinEvaluar) {
+      motivoBloqueoReanudar =
+        'Debes registrar la evaluación técnica sobre el presupuesto complementario rechazado antes de reanudar.';
+    } else if (complementarios.length > 0) {
+      const ultimoComp = complementarios[complementarios.length - 1];
+      if (ultimoComp.estado === 'RECHAZADO') {
+        const evalUltimo = evaluations.find(
+          (e) => e.idPresupuestoRechazado === ultimoComp.idPresupuesto
+        );
+        if (evalUltimo?.elementosIndispensables) {
+          motivoBloqueoReanudar =
+            'Los elementos rechazados fueron declarados indispensables; se requiere una nueva cotización autorizada por el Administrador y aprobada por el Cliente.';
+        }
+      }
+    }
+
+    const puedeEmitirComplementarioNormal =
+      !hayPendiente &&
+      !rechazadoSinEvaluar &&
+      !autorizacionDisponible &&
+      !motivoBloqueoReanudar;
+
+    return {
+      original,
+      originalAprobado: original?.estado === 'APROBADO',
+      hayPendiente,
+      rechazadoSinEvaluar,
+      autorizacionDisponible,
+      motivoBloqueoReanudar,
+      puedeEmitirComplementarioNormal,
+    };
+  }, [budgets, evaluations, authorizations]);
 
   if (loading) {
     return (
@@ -175,7 +296,7 @@ export default function TechOrderWorkPage() {
         />
       )}
 
-      {/* Tarjeta Resumen de la Orden */}
+      {/* Cabecera Resumen de la Orden */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
           <div className="flex items-center gap-2.5">
@@ -250,14 +371,48 @@ export default function TechOrderWorkPage() {
       {/* 2. Elaboración de Presupuesto Original (CV-05) */}
       {diagnostic &&
         order.estadoOperativo === 'EN_DIAGNOSTICO' &&
-        !tienePresupuestoOriginal && (
+        !estadoFlujoComplementarios.original && (
           <CreateOriginalBudgetForm
             order={order}
             onBudgetCreated={handleOriginalBudgetCreated}
           />
         )}
 
-      {/* 3. Listado de Presupuestos Emitidos */}
+      {/* 3. Panel de Ejecución y Cronómetro de Tiempo Efectivo (CV-07 y CV-17) */}
+      {['PRESUPUESTADO', 'EN_EJECUCION', 'PAUSADA', 'FINALIZADO'].includes(
+        order.estadoOperativo
+      ) && (
+        <ExecutionControlPanel
+          order={order}
+          timeSummary={timeSummary}
+          originalBudgetApproved={estadoFlujoComplementarios.originalAprobado}
+          canControl={true}
+          resumeBlockedReason={estadoFlujoComplementarios.motivoBloqueoReanudar}
+          onTimeUpdated={handleTimeUpdated}
+        />
+      )}
+
+      {/* 4. Evaluación Técnica cuando el Cliente rechaza un Presupuesto Complementario (CV-07 / RN-09) */}
+      {order.estadoOperativo === 'PAUSADA' &&
+        estadoFlujoComplementarios.rechazadoSinEvaluar && (
+          <TechnicalEvaluationForm
+            rejectedBudget={estadoFlujoComplementarios.rechazadoSinEvaluar}
+            onEvaluationSaved={handleEvaluationSaved}
+          />
+        )}
+
+      {/* 5. Emisión de Presupuesto Complementario (CV-12) o Nueva Propuesta Autorizada (CV-15) */}
+      {order.estadoOperativo === 'PAUSADA' &&
+        (estadoFlujoComplementarios.puedeEmitirComplementarioNormal ||
+          Boolean(estadoFlujoComplementarios.autorizacionDisponible)) && (
+          <CreateComplementaryForm
+            order={order}
+            activeAuthorization={estadoFlujoComplementarios.autorizacionDisponible}
+            onCreated={handleComplementaryCreated}
+          />
+        )}
+
+      {/* 6. Listado de Presupuestos Emitidos */}
       {budgets.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-servitec-navy uppercase tracking-wider">

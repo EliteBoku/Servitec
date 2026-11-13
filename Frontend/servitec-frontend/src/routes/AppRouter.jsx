@@ -28,6 +28,8 @@ import TechOrderWorkPage from '../modules/orders/pages/TechOrderWorkPage';
 
 import ClientOrderDetailPage from '../modules/orders/pages/ClientOrderDetailPage';
 
+import AdminOrderDetailPage from '../modules/orders/pages/AdminOrderDetailPage';
+
 function ModulePlaceholder({ title, step }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-xs">
@@ -67,10 +69,7 @@ export default function AppRouter() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="ordenes" replace />} />
           <Route path="ordenes" element={<AdminOrdersBoardPage />} />
-          <Route
-            path="ordenes/:idOrden"
-            element={<ModulePlaceholder title="Expediente Administrativo de Orden" step="Micro-paso F5.1 / F6.1" />}
-          />
+          <Route path="ordenes/:idOrden" element={<AdminOrderDetailPage />} />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="catalogo" element={<AdminCatalogPage />} />
           <Route path="movimientos" element={<AdminMovementsPage />} />
