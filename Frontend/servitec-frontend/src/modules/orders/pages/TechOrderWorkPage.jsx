@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ordersApi } from '../../../api/ordersApi';
 import { diagnosticsApi } from '../../../api/diagnosticsApi';
+import { budgetsApi } from '../../../api/budgetsApi';
 import { extractApiError } from '../../../api/httpClient';
 import { formatDateTime } from '../../../shared/utils/formatters';
 import StatusBadge from '../../../shared/components/StatusBadge';
@@ -18,6 +19,8 @@ import AlertBanner from '../../../shared/components/AlertBanner';
 import OrderTimelineModal from '../components/OrderTimelineModal';
 import DiagnosticFormCard from '../../diagnostics/components/DiagnosticFormCard';
 import DiagnosticReadOnlyCard from '../../diagnostics/components/DiagnosticReadOnlyCard';
+import CreateOriginalBudgetForm from '../../budgets/components/CreateOriginalBudgetForm';
+import ClientBudgetDecisionCard from '../../budgets/components/ClientBudgetDecisionCard';
 
 export default function TechOrderWorkPage() {
   const { idOrden } = useParams();
@@ -25,6 +28,7 @@ export default function TechOrderWorkPage() {
 
   const [order, setOrder] = useState(null);
   const [diagnostic, setDiagnostic] = useState(null);
+  const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorInfo, setErrorInfo] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -34,15 +38,20 @@ export default function TechOrderWorkPage() {
     setLoading(true);
     setErrorInfo(null);
     try {
-      const [ordenData, diagData] = await Promise.all([
+      const [ordenData, diagData, budgetsData] = await Promise.all([
         ordersApi.consultarDetalleOrden(idOrden),
         diagnosticsApi.consultarDiagnosticoPorOrden(idOrden),
+        budgetsApi.listarPresupuestosPorOrden(idOrden),
       ]);
       setOrder(ordenData);
       setDiagnostic(diagData);
+      setBudgets(budgetsData);
     } catch (err) {
       setErrorInfo(
-        extractApiError(err, 'No fue posible cargar la información de la orden de servicio.')
+        extractApiError(
+          err,
+          'No fue posible cargar la información de la orden de servicio.'
+        )
       );
     } finally {
       setLoading(false);
@@ -59,14 +68,35 @@ export default function TechOrderWorkPage() {
       prev
         ? {
             ...prev,
-            estadoOperativo: diagRegistrado.estadoOrdenActualizado || 'EN_DIAGNOSTICO',
+            estadoOperativo:
+              diagRegistrado.estadoOrdenActualizado || 'EN_DIAGNOSTICO',
           }
         : prev
     );
     setSuccessMessage(
-      'Diagnóstico registrado correctamente. El estado de la orden cambió a En diagnóstico.'
+      'Diagnóstico registrado correctamente. Ya puedes elaborar el presupuesto original.'
     );
   };
+
+  const handleOriginalBudgetCreated = (nuevoPresupuesto) => {
+    setBudgets((prev) => [...prev, nuevoPresupuesto]);
+    setOrder((prev) =>
+      prev
+        ? {
+            ...prev,
+            estadoOperativo:
+              nuevoPresupuesto.estadoOperativoOrden || 'PRESUPUESTADO',
+          }
+        : prev
+    );
+    setSuccessMessage(
+      `Presupuesto ${nuevoPresupuesto.codigoPresupuesto} generado correctamente. La orden pasó al estado Presupuestado en espera de la decisión del Cliente.`
+    );
+  };
+
+  const tienePresupuestoOriginal = budgets.some(
+    (b) => b.tipoPresupuesto === 'ORIGINAL'
+  );
 
   if (loading) {
     return (
@@ -97,7 +127,7 @@ export default function TechOrderWorkPage() {
 
   return (
     <div className="space-y-6">
-      {/* Barra superior de navegación */}
+      {/* Barra superior */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
@@ -207,7 +237,7 @@ export default function TechOrderWorkPage() {
         </div>
       </div>
 
-      {/* Sección de Diagnóstico Técnico (CV-04): Formulario si aún no existe, o Lectura si ya fue registrado */}
+      {/* 1. Diagnóstico Técnico en Sitio (CV-04) */}
       {!diagnostic && order.estadoOperativo === 'SOLICITADO' ? (
         <DiagnosticFormCard
           order={order}
@@ -217,17 +247,32 @@ export default function TechOrderWorkPage() {
         <DiagnosticReadOnlyCard diagnostic={diagnostic} />
       )}
 
-      {/* Aviso de siguiente etapa cuando ya está en EN_DIAGNOSTICO */}
-      {order.estadoOperativo === 'EN_DIAGNOSTICO' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900">
-          <p className="font-bold">Siguiente etapa: Elaboración del Presupuesto Original (CV-05)</p>
-          <p className="mt-0.5">
-            El diagnóstico técnico ya fue registrado. En el Micro-paso F4.1 se habilitará aquí el buscador del catálogo activo y el cálculo automático de mano de obra.
-          </p>
+      {/* 2. Elaboración de Presupuesto Original (CV-05) */}
+      {diagnostic &&
+        order.estadoOperativo === 'EN_DIAGNOSTICO' &&
+        !tienePresupuestoOriginal && (
+          <CreateOriginalBudgetForm
+            order={order}
+            onBudgetCreated={handleOriginalBudgetCreated}
+          />
+        )}
+
+      {/* 3. Listado de Presupuestos Emitidos */}
+      {budgets.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-bold text-servitec-navy uppercase tracking-wider">
+            Presupuestos emitidos en la orden
+          </h3>
+          {budgets.map((b) => (
+            <ClientBudgetDecisionCard
+              key={b.idPresupuesto}
+              budget={b}
+              canDecide={false}
+            />
+          ))}
         </div>
       )}
 
-      {/* Modal de Historial de Estados */}
       <OrderTimelineModal
         isOpen={isTimelineOpen}
         onClose={() => setIsTimelineOpen(false)}
